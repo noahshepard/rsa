@@ -1,9 +1,10 @@
-#ifndef UINT2048
-#define UINT2048
+#ifndef UINT2048_H
+#define UINT2048_H
 
 #include <array>
 #include <cstdint>
 #include <string>
+#include <utility>
 
 namespace rsa {
 class uint2048_t {
@@ -33,15 +34,34 @@ public:
   uint2048_t operator^(const uint2048_t &rhs) const;
   uint2048_t operator~() const;
 
+  //-------------------Comparison Operators-----------------
+  bool operator==(const uint2048_t &rhs) const;
+  bool operator!=(const uint2048_t &rhs) const;
+  bool operator>=(const uint2048_t &rhs) const;
+  bool operator<=(const uint2048_t &rhs) const;
+  bool operator<(const uint2048_t &rhs) const;
+  bool operator>(const uint2048_t &rhs) const;
+
   //-----------------Utility Functions-----------------
 
-  std::string toHexString() const;
+  std::string to_hex_string() const;
 
-  std::string toHexStringTrimmed() const;
+  std::string to_hex_string_trimmed() const;
+
+  bool is_zero() const;
+
+  bool get_bit(size_t bit) const;
+  void set_bit(size_t bit, bool val);
+
+  static uint2048_t random_1024_bit();
+  static uint2048_t random_in_range(const uint2048_t &min,
+                                    const uint2048_t &max);
 
 private:
   std::array<uint64_t, LIMBS> limbs = {};
+
+  static std::pair<uint2048_t, uint2048_t> divmod(const uint2048_t &dividend,
+                                                  const uint2048_t &divisor);
 };
 } // namespace rsa
-
-#endif
+#endif // UINT2048

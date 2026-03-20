@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.15)
 project(RSA)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 
@@ -9,8 +9,10 @@ find_package(GTest REQUIRED)
 
 add_library(rsa_lib
     lib/uint2048.cpp
+    lib/rsa.cpp
 )
-target_include_directories(rsa_lib PUBLIC lib)
+target_include_directories(rsa_lib PUBLIC lib
+)
 
 add_executable(rsa_tests
     tests/uint2048_tests.cpp
