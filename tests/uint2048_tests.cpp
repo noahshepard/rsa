@@ -148,3 +148,15 @@ TEST(ComparisonOPS, GreaterThanFalse) {
   rsa::uint2048_t b("123456789abcdef1");
   EXPECT_FALSE(a > b);
 }
+
+TEST(random, Random1024Bit) {
+  rsa::uint2048_t random_num = rsa::uint2048_t::random_1024_bit();
+  EXPECT_TRUE(random_num < (rsa::uint2048_t(1) << 1024));
+}
+
+TEST(random, RandomInRange) {
+  rsa::uint2048_t min("10000000000000000"); // 2^64
+  rsa::uint2048_t max("20000000000000000"); // 2^65
+  rsa::uint2048_t random_num = rsa::uint2048_t::random_in_range(min, max);
+  EXPECT_TRUE(random_num >= min && random_num < max);
+}

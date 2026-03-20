@@ -3,6 +3,12 @@
 #include <array>
 #include <random>
 
+// TODO LIST
+// - Encrypt/Decrypt Functions
+// - I/O Functions
+// - generate_coprime, mod_inverse, mod_exp, and extended_gcd functions
+// - Unit and E2E tests for all RSA functions
+
 namespace rsa {
 std::array<uint64_t, 100> PRIMES = {
     2,   3,   5,   7,   11,  13,  17,  19,  23,  29,  31,  37,  41,  43,

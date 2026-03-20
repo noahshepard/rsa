@@ -1,9 +1,9 @@
 #include "uint2048.hpp"
 #include <charconv>
 #include <format>
+#include <iostream>
 #include <random>
 #include <stdexcept>
-#include <string>
 
 // Constructors
 rsa::uint2048_t::uint2048_t() {}
@@ -237,10 +237,10 @@ void rsa::uint2048_t::set_bit(size_t bit, bool val) {
 rsa::uint2048_t rsa::uint2048_t::random_1024_bit() {
   uint2048_t result;
   std::random_device rd;
-  std::mt19937_64 gen(rd());
-  std::uniform_int_distribution<uint64_t> dis(0, UINT64_MAX);
   for (size_t i = 0; i < LIMBS / 2; i++) {
-    result.limbs[i] = gen();
+    uint64_t high = rd();
+    uint64_t low = rd();
+    result.limbs[i] = (high << 32) | low;
   }
   return result;
 }
@@ -248,18 +248,21 @@ rsa::uint2048_t rsa::uint2048_t::random_1024_bit() {
 rsa::uint2048_t rsa::uint2048_t::random_in_range(const rsa::uint2048_t &min,
                                                  const rsa::uint2048_t &max) {
   if (min >= max) {
-    throw std::invalid_argument("Min must be less than Max");
+    throw std::invalid_argument("min must be less than max");
   }
+
   std::random_device rd;
-  std::mt19937_64 gen(rd());
-  std::uniform_int_distribution<uint64_t> dis(0, UINT64_MAX);
+  uint2048_t range = max - min;
 
   while (true) {
     uint2048_t candidate;
     for (size_t i = 0; i < LIMBS; i++) {
-      candidate.limbs[i] = gen();
+      uint64_t high = rd();
+      uint64_t low = rd();
+      candidate.limbs[i] = (high << 32) | low;
     }
-    if (candidate > min && candidate < max) {
+    candidate = candidate % range + min;
+    if (candidate >= min && candidate < max) {
       return candidate;
     }
   }

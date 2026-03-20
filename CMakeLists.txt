@@ -16,6 +16,7 @@ target_include_directories(rsa_lib PUBLIC lib
 
 add_executable(rsa_tests
     tests/uint2048_tests.cpp
+    tests/rsa_tests.cpp
 )
 
 target_link_libraries(rsa_tests
