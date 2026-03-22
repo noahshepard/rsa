@@ -15,6 +15,12 @@ struct private_key {
   uint2048_t n;
 };
 
+struct gcd_combo {
+  uint2048_t gcd;
+  uint2048_t s;
+  uint2048_t t;
+};
+
 class RSA {
 public:
   static constexpr size_t RABIN_MILLER_ROUNDS = 6;
@@ -34,10 +40,9 @@ public:
                               const private_key &priv_key);
 
 private:
-  static uint2048_t mod_exp(const uint2048_t &base, const uint2048_t &exp,
-                            const uint2048_t &mod);
-  static std::pair<uint2048_t, uint2048_t> extended_gcd(const uint2048_t &a,
-                                                        const uint2048_t &b);
+  static uint2048_t mod_exp(const uint2048_t &a, const uint2048_t &k,
+                            const uint2048_t &m);
+  static gcd_combo extended_gcd(const uint2048_t &a, const uint2048_t &b);
   static uint2048_t mod_inverse(const uint2048_t &a, const uint2048_t &m);
 
   static uint2048_t generate_large_prime();

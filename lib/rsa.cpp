@@ -40,6 +40,39 @@ uint2048_t RSA::decrypt(const uint2048_t &ciphertext,
   return mod_exp(ciphertext, priv_key.d, priv_key.n);
 }
 // Private API
+uint2048_t RSA::mod_exp(const uint2048_t &a, const uint2048_t &k,
+                        const uint2048_t &m) {
+  if (k.is_zero()) {
+    return uint2048_t(1);
+  }
+
+  uint2048_t base_mod = a % m;
+
+  if (k.get_bit(0)) {
+    uint2048_t half_exp = mod_exp(base_mod, k >> 1, m);
+    return (base_mod * half_exp * half_exp) % m;
+  } else {
+    uint2048_t half_exp = mod_exp(base_mod, k >> 1, m);
+    return (half_exp * half_exp) % m;
+  }
+}
+
+gcd_combo RSA::extended_gcd(const uint2048_t &a, const uint2048_t &b) {
+  if (b.is_zero()) {
+    return {a, uint2048_t(1), uint2048_t(0)};
+  }
+  gcd_combo next = extended_gcd(b, a % b);
+  return {next.gcd, next.s, next.t - (a / b) * next.s};
+}
+
+uint2048_t RSA::mod_inverse(const uint2048_t &a, const uint2048_t &m) {
+  gcd_combo result = extended_gcd(a, m);
+  if (result.gcd != uint2048_t(1)) {
+    throw std::invalid_argument("Inverse does not exist");
+  }
+  return results.s % m;
+}
+
 uint2048_t RSA::generate_large_prime() {
   while (true) {
     uint2048_t candidate = generate_low_level_prime();

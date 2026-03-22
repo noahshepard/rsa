@@ -9,7 +9,9 @@ find_package(GTest REQUIRED)
 
 add_library(rsa_lib
     lib/uint2048.cpp
+    lib/int2048.cpp
     lib/rsa.cpp
+
 )
 target_include_directories(rsa_lib PUBLIC lib
 )
