@@ -50,6 +50,8 @@ public:
 
   bool is_zero() const;
 
+  size_t bit_length() const;
+
   bool get_bit(size_t bit) const;
   void set_bit(size_t bit, bool val);
 

@@ -1,6 +1,7 @@
 #ifndef RSA_H
 #define RSA_H
 
+#include "int2048.hpp"
 #include "uint2048.hpp"
 
 namespace rsa {
@@ -17,13 +18,13 @@ struct private_key {
 
 struct gcd_combo {
   uint2048_t gcd;
-  uint2048_t s;
-  uint2048_t t;
+  int2048_t s;
+  int2048_t t;
 };
 
 class RSA {
 public:
-  static constexpr size_t RABIN_MILLER_ROUNDS = 6;
+  static constexpr size_t RABIN_MILLER_ROUNDS = 2;
 
   static std::pair<public_key, private_key> generate_key_pair();
   static void generate_key_pair_to_files(const std::string &public_key_file,
@@ -39,7 +40,7 @@ public:
                               const std::string &message_file,
                               const private_key &priv_key);
 
-private:
+  // private:
   static uint2048_t mod_exp(const uint2048_t &a, const uint2048_t &k,
                             const uint2048_t &m);
   static gcd_combo extended_gcd(const uint2048_t &a, const uint2048_t &b);

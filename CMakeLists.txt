@@ -27,12 +27,23 @@ target_link_libraries(rsa_tests
     GTest::gtest_main
 )
 
-
 target_compile_options(rsa_tests PRIVATE 
     -Wall 
     -Wextra 
     -Wpedantic
     -Werror
+    -fsanitize=address -g
+)
+
+target_link_options(rsa_tests PRIVATE -fsanitize=address)
+
+add_executable(rsa_app 
+    src/main.cpp
+)
+
+target_link_libraries(rsa_app
+    PRIVATE
+    rsa_lib
 )
 
 include(GoogleTest)

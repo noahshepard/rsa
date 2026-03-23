@@ -1,6 +1,8 @@
 #include "rsa.hpp"
+#include "int2048.hpp"
 #include "uint2048.hpp"
 #include <array>
+#include <iostream>
 #include <random>
 
 // TODO LIST
@@ -10,7 +12,7 @@
 // - Unit and E2E tests for all RSA functions
 
 namespace rsa {
-std::array<uint64_t, 100> PRIMES = {
+std::array<uint64_t, 70> PRIMES = {
     2,   3,   5,   7,   11,  13,  17,  19,  23,  29,  31,  37,  41,  43,
     47,  53,  59,  61,  67,  71,  73,  79,  83,  89,  97,  101, 103, 107,
     109, 113, 127, 131, 137, 139, 149, 151, 157, 163, 167, 173, 179, 181,
@@ -20,13 +22,20 @@ std::array<uint64_t, 100> PRIMES = {
 // Public API
 std::pair<public_key, private_key> RSA::generate_key_pair() {
   uint2048_t p = generate_large_prime();
+  std::cout << "p: " << p.to_hex_string_trimmed() << std::endl;
   uint2048_t q = generate_large_prime();
+  std::cout << "q: " << q.to_hex_string_trimmed() << std::endl;
 
   uint2048_t n = p * q;
+  std::cout << "n: " << n.to_hex_string_trimmed() << std::endl;
   uint2048_t phi = (p - 1) * (q - 1);
+  std::cout << "phi: " << phi.to_hex_string_trimmed() << std::endl;
 
   uint2048_t e = generate_coprime(phi);
+  std::cout << "e: " << e.to_hex_string_trimmed() << std::endl;
+
   uint2048_t d = mod_inverse(e, phi);
+  std::cout << "d: " << d.to_hex_string_trimmed() << std::endl;
 
   return {public_key{e, n}, private_key{d, n}};
 }
@@ -42,27 +51,48 @@ uint2048_t RSA::decrypt(const uint2048_t &ciphertext,
 // Private API
 uint2048_t RSA::mod_exp(const uint2048_t &a, const uint2048_t &k,
                         const uint2048_t &m) {
-  if (k.is_zero()) {
-    return uint2048_t(1);
+
+  if (m.is_zero()) {
+    throw std::invalid_argument("Modulo by zero");
   }
 
-  uint2048_t base_mod = a % m;
+  uint2048_t result = 1;
+  uint2048_t base = a % m;
+  uint2048_t exp = k;
 
-  if (k.get_bit(0)) {
-    uint2048_t half_exp = mod_exp(base_mod, k >> 1, m);
-    return (base_mod * half_exp * half_exp) % m;
-  } else {
-    uint2048_t half_exp = mod_exp(base_mod, k >> 1, m);
-    return (half_exp * half_exp) % m;
+  while (!exp.is_zero()) {
+    if (exp.get_bit(0)) {
+      result = (result * base) % m;
+    }
+    base = (base * base) % m;
+    exp = exp >> 1;
   }
+  return result;
 }
 
 gcd_combo RSA::extended_gcd(const uint2048_t &a, const uint2048_t &b) {
-  if (b.is_zero()) {
-    return {a, uint2048_t(1), uint2048_t(0)};
+  uint2048_t x = a;
+  uint2048_t y = b;
+
+  int2048_t old_s(1), s(0);
+  int2048_t old_t(0), t(1);
+
+  while (!y.is_zero()) {
+    uint2048_t q = x / y;
+
+    uint2048_t temp_r = y;
+    y = x % y;
+    x = temp_r;
+
+    int2048_t temp_s = s;
+    s = old_s - int2048_t(q) * s;
+    old_s = temp_s;
+
+    int2048_t temp_t = t;
+    t = old_t - int2048_t(q) * t;
+    old_t = temp_t;
   }
-  gcd_combo next = extended_gcd(b, a % b);
-  return {next.gcd, next.s, next.t - (a / b) * next.s};
+  return {x, old_s, old_t};
 }
 
 uint2048_t RSA::mod_inverse(const uint2048_t &a, const uint2048_t &m) {
@@ -70,7 +100,11 @@ uint2048_t RSA::mod_inverse(const uint2048_t &a, const uint2048_t &m) {
   if (result.gcd != uint2048_t(1)) {
     throw std::invalid_argument("Inverse does not exist");
   }
-  return results.s % m;
+
+  if (result.s.neg) {
+    return m - result.s.mag;
+  }
+  return result.s.mag % m;
 }
 
 uint2048_t RSA::generate_large_prime() {
@@ -104,8 +138,8 @@ uint2048_t RSA::generate_low_level_prime() {
 bool RSA::rabin_miller_test(const uint2048_t &n) {
   uint2048_t d = n - 1;
   size_t r = 0;
-  while (d % 2 == 0) {
-    d = d / uint2048_t(2);
+  while (d.get_bit(0) == 0) {
+    d = d >> 1;
     r++;
   }
 
@@ -125,12 +159,22 @@ bool RSA::is_composite(const uint2048_t &n, const uint2048_t &a,
     return false;
   }
   for (size_t i = 1; i < r; i++) {
-    x = mod_exp(x, uint2048_t(2), n);
+    x = (x * x) % n;
     if (x == n - 1) {
       return false;
     }
   }
   return true;
+}
+
+uint2048_t RSA::generate_coprime(const uint2048_t &phi) {
+  while (true) {
+    uint2048_t candidate = uint2048_t::random_in_range(0, phi);
+
+    if (extended_gcd(candidate, phi).gcd == 1) {
+      return candidate;
+    }
+  }
 }
 
 } // namespace rsa

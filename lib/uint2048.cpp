@@ -56,9 +56,15 @@ rsa::uint2048_t rsa::uint2048_t::operator-(const rsa::uint2048_t &rhs) const {
 
 rsa::uint2048_t rsa::uint2048_t::operator*(const rsa::uint2048_t &rhs) const {
   rsa::uint2048_t result;
-  for (size_t l = 0; l < BITS; l++) {
-    if (rhs.get_bit(l)) {
-      result = result + (*this << l);
+  for (size_t i = 0; i < LIMBS; i++) {
+    if (limbs[i] == 0)
+      continue;
+    uint64_t carry = 0;
+    for (size_t j = 0; j < LIMBS - i; j++) {
+      __uint128_t prod =
+          (__uint128_t)limbs[i] * rhs.limbs[j] + result.limbs[i + j] + carry;
+      result.limbs[i + j] = (uint64_t)prod;
+      carry = (uint64_t)(prod >> 64);
     }
   }
   return result;
@@ -102,7 +108,7 @@ rsa::uint2048_t rsa::uint2048_t::operator>>(size_t shift) const {
       continue;
     }
     result.limbs[i] = limbs[i + limb_shift] >> bit_shift;
-    if (bit_shift > 0 && i + limb_shift <= LIMBS) {
+    if (bit_shift > 0 && i + limb_shift + 1 < LIMBS) {
       result.limbs[i] |= limbs[i + 1 + limb_shift] << (LIMB_BITS - bit_shift);
     }
   }
@@ -210,6 +216,19 @@ bool rsa::uint2048_t::is_zero() const {
   return true;
 }
 
+size_t rsa::uint2048_t::bit_length() const {
+  for (size_t i = LIMBS; i-- > 0;) {
+    if (limbs[i] != 0) {
+      for (size_t b = LIMB_BITS; b-- > 0;) {
+        if (limbs[i] >> b & 1) {
+          return i * LIMB_BITS + b + 1;
+        }
+      }
+    }
+  }
+  return 0;
+}
+
 bool rsa::uint2048_t::get_bit(size_t bit) const {
   if (bit >= BITS) {
     throw std::out_of_range(
@@ -282,7 +301,8 @@ rsa::uint2048_t::divmod(const rsa::uint2048_t &dividend,
   rsa::uint2048_t quotient = 0;
   rsa::uint2048_t remainder = 0;
 
-  for (size_t i = BITS - 1; i-- > 0;) {
+  size_t bits = dividend.bit_length();
+  for (size_t i = bits; i-- > 0;) {
     remainder = remainder << 1;
     remainder.set_bit(0, dividend.get_bit(i));
 
@@ -291,6 +311,5 @@ rsa::uint2048_t::divmod(const rsa::uint2048_t &dividend,
       quotient.set_bit(i, 1);
     }
   }
-
   return {quotient, remainder};
 }

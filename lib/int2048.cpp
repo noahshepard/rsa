@@ -64,9 +64,5 @@ bool int2048_t::operator>=(const int2048_t &rhs) const {
 }
 
 // Utility Functions
-bool int2048_t::is_negative() const { return neg; }
-
-uint2048_t int2048_t::magnitude() const { return mag; }
-
 bool int2048_t::is_zero() const { return mag.is_zero(); }
 } // namespace rsa

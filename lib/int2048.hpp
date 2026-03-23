@@ -24,11 +24,8 @@ public:
   bool operator>=(const int2048_t &rhs) const;
 
   // Utility Functions
-  bool is_negative() const;
-  uint2048_t magnitude() const;
   bool is_zero() const;
 
-private:
   uint2048_t mag;
   bool neg;
 };
