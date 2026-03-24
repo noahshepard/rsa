@@ -43,6 +43,67 @@ TEST(ArithmaticOPS, Multiplication) {
   EXPECT_EQ(result.to_hex_string_trimmed(), "121fa00ad77d7422236d88fe5618cf");
 }
 
+TEST(ArithmaticOPS, LargeKnownProduct) {
+  rsa::uint2048_t e(65537);
+  rsa::uint2048_t d(
+      "4335adde62fb8b131c89d6af6e8818ab62777e6d49fac4d35ff0c303d23b68d8cf2972d2"
+      "d592bc9e2e2712510c63f7999bb5ffbe50942f4006befdc26a4bbad64da6fb76c8e9df0a"
+      "42b5d21695189ba0dbee4b595b4613056a9a55c1fede41e6a004952e7b50433155389daa"
+      "314e48d2158597257bf64b88e23149750ff641a50976157b655763c48cae284cff63d1ea"
+      "93067fceba21d917ae161e47b81a48df79cdefdffcb463833d1bb25a0545a76831b3b923"
+      "c5ce39eba0161a0a4d84462a0046f6db139973ea562bc129f1289ddc3e71d2d11a0ce750"
+      "4353bd5254a34fa180ddc2656709dbd1f2f53ddd95138ae82ec0abb139535d424115b316"
+      "98b39411");
+  rsa::uint2048_t result = e * d;
+  std::cout << "result: " << result.to_hex_string_trimmed() << "\n";
+  rsa::uint2048_t expected_result(
+      "4335f11410d9ee0ea79cf339453787337b22e0e4c8680ece24c422f4953f3b14380241fc"
+      "48659230eac540781eb503fd934f9b7450527fd435ff0481680e2522087d491dc460a7f4"
+      "21c014cc672f30b9778f2747a69f6e4b7d9fc05c54a040c4e1eb3533107ebe819869f2e2"
+      "cef87a205e57acab131bc77f2dba2ba6596b519b4b1b1ef17ad2c91bf072b4fb27b0d14e"
+      "64f112d539f09339872dcc5dd66200f9c2ad69adec946037a09eef75b79facadd91bead7"
+      "7ef1ffb9da01ba20678e93ae4670f7220a748783ca161755b2528f04dc4e1142ecde015d"
+      "2aa400a611f5a444d07f4343296f42dbcec730d2d2f11ffbb9a8da71e50496959e57f42c"
+      "4bca2cc49411");
+  EXPECT_EQ(result.to_hex_string_trimmed(),
+            expected_result.to_hex_string_trimmed());
+}
+
+TEST(ArithmaticOPS, LargeSquare) {
+  rsa::uint2048_t a(
+      "e0b11fe18b90816bcd7592f0388d613984aeb62cc639adeecba026a421154b66ef27e6a9"
+      "cf617f930d3b81fd50cc42dadb746f07edb05d57bc6b22e188094bfe38c0967fdd0e09f3"
+      "a2cf06122db2dc9fde2611a362bde15f4c1b7e7fa67272993fa92725efff3df96974dbbc"
+      "448d99919de7c2ec302c6ad8d4536a56b2f334d5");
+  rsa::uint2048_t result = a * a;
+  EXPECT_EQ(result.to_hex_string_trimmed(),
+            "c5367257ce1846d33e11b718213ab9e6ceb9a567c77d5be5b6e59e63e71d2fdaf3"
+            "8c773ef0f4905fe4fca4250c466033b10283294aefb50bc6d11f181340627aba1a"
+            "310a28f00b72343f1c4e395f2b83bf779b691dbb3ea95178c90dafb485d6476b21"
+            "c28b4c67034fa52ec5cede1cd7a7258f4d2bef3d35d42864add994ec961ad98c76"
+            "7ac91aa999cd9804ca7cd20b3833e4b6a015bde8471e2c2a1fa988d2becc5c088f"
+            "29f5437931c6c583201418d4acca73577a0f20fe03526cec4f4222de9c602a40cf"
+            "9a372d9f4fa897a879fd7295796a738fe7d5a8eda398fe24d8abded99af8a5e125"
+            "8bef72434324f7b81c48b875ef24284e332a5cffa18b453939");
+}
+
+TEST(ArithmaticOPS, LargeSquareMod) {
+  rsa::uint2048_t base(
+      "e0b11fe18b90816bcd7592f0388d613984aeb62cc639adeecba026a421154b66ef27e6a9"
+      "cf617f930d3b81fd50cc42dadb746f07edb05d57bc6b22e188094bfe38c0967fdd0e09f3"
+      "a2cf06122db2dc9fde2611a362bde15f4c1b7e7fa67272993fa92725efff3df96974dbbc"
+      "448d99919de7c2ec302c6ad8d4536a56b2f334d5");
+  rsa::uint2048_t mod(
+      "e0b11fe18b90816bcd7592f0388d613984aeb62cc639adeecba026a421154b66ef27e6a9"
+      "cf617f930d3b81fd50cc42dadb746f07edb05d57bc6b22e188094bfe38c0967fdd0e09f3"
+      "a2cf06122db2dc9fde2611a362bde15f4c1b7e7fa67272993fa92725efff3df96974dbbc"
+      "448d99919de7c2ec302c6ad8d4536a56b2f334d5");
+
+  rsa::uint2048_t result = (base * base) % mod;
+  EXPECT_EQ(result.to_hex_string_trimmed(),
+            "0"); // (x^2) mod x should be 0 for any x
+}
+
 TEST(ArithmaticOPS, Division) {
   rsa::uint2048_t a("121fa00ad77d7422236d88fe5618cf");
   rsa::uint2048_t b("123456789abcdef");
@@ -62,6 +123,16 @@ TEST(ArithmaticOPS, ModuloNonZero) {
   rsa::uint2048_t b("123456789abcde0");
   rsa::uint2048_t result = a % b;
   EXPECT_EQ(result.to_hex_string_trimmed(), "d2f");
+}
+
+TEST(ArithmaticOPS, ModuloLarge) {
+  rsa::uint2048_t a(
+      "e0b11fe18b90816bcd7592f0388d613984aeb62cc639adeecba026a421154b66ef27e6a9"
+      "cf617f930d3b81fd50cc42dadb746f07edb05d57bc6b22e188094bfe38c0967fdd0e09f3"
+      "a2cf06122db2dc9fde2611a362bde15f4c1b7e7fa67272993fa92725efff3df96974dbbc"
+      "448d99919de7c2ec302c6ad8d4536a56b2f334d5");
+  rsa::uint2048_t result = a % a;
+  EXPECT_EQ(result.to_hex_string_trimmed(), "0");
 }
 
 TEST(ArithmaticOPS, SmallModulo) {

@@ -24,7 +24,7 @@ struct gcd_combo {
 
 class RSA {
 public:
-  static constexpr size_t RABIN_MILLER_ROUNDS = 2;
+  static constexpr size_t RABIN_MILLER_ROUNDS = 10;
 
   static std::pair<public_key, private_key> generate_key_pair();
   static void generate_key_pair_to_files(const std::string &public_key_file,

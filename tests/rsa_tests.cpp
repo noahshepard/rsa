@@ -29,14 +29,65 @@ TEST(ModArith, ModInverse) {
   EXPECT_EQ(result.to_hex_string_trimmed(), "1b");
 }
 
+TEST(ModArith, FermatLittleTheorem) {
+  // Fermat's little theorem: a^(p-1) ≡ 1 (mod p) for prime p
+  rsa::uint2048_t p(15487469); // known prime
+  rsa::uint2048_t a(2);
+  rsa::uint2048_t result = rsa::RSA::mod_exp(a, p - rsa::uint2048_t(1), p);
+  EXPECT_EQ(result, rsa::uint2048_t(1));
+}
+
 TEST(PrimeGen, LowLevelPrime) {
   rsa::uint2048_t prime = rsa::RSA::generate_low_level_prime();
   EXPECT_TRUE(prime.get_bit(1023)); // Ensure it's 1024 bits
   EXPECT_TRUE(prime.get_bit(0));    // Ensure it's odd
 }
 
-TEST(PrimeGen, RabinMillerTest) {
-  rsa::uint2048_t prime = rsa::RSA::generate_low_level_prime();
+TEST(PrimeGen, KnownSmallPrimes) {
+  rsa::uint2048_t n(15487469); // known prime
+
+  // precompute d and r such that n-1 = 2^r * d
+  rsa::uint2048_t d = n - rsa::uint2048_t(1);
+  size_t r = 0;
+  while (!d.get_bit(0)) {
+    d = d >> 1;
+    r++;
+  }
+
+  EXPECT_FALSE(rsa::RSA::is_composite(n, rsa::uint2048_t(2), d, r));
+  EXPECT_FALSE(rsa::RSA::is_composite(n, rsa::uint2048_t(3), d, r));
+  EXPECT_FALSE(rsa::RSA::is_composite(n, rsa::uint2048_t(5), d, r));
+}
+
+TEST(PrimeGen, KnownComposite) {
+  rsa::uint2048_t n((uint64_t)15487469 * 15487469); // known composite
+
+  // precompute d and r such that n-1 = 2^r * d
+  rsa::uint2048_t d = n - rsa::uint2048_t(1);
+  size_t r = 0;
+  while (!d.get_bit(0)) {
+    d = d >> 1;
+    r++;
+  }
+
+  EXPECT_TRUE(rsa::RSA::is_composite(n, rsa::uint2048_t(2), d, r));
+  EXPECT_TRUE(rsa::RSA::is_composite(n, rsa::uint2048_t(3), d, r));
+  EXPECT_TRUE(rsa::RSA::is_composite(n, rsa::uint2048_t(5), d, r));
+}
+
+TEST(PrimeGen, RabinMillerKnownPrimes) {
+  rsa::uint2048_t prime_a(15487469);
+  rsa::uint2048_t prime_b(7867);
+  EXPECT_TRUE(rsa::RSA::rabin_miller_test(prime_a));
+  EXPECT_TRUE(rsa::RSA::rabin_miller_test(prime_b));
+}
+
+TEST(PrimeGen, RabinMillerBigPrime) {
+  rsa::uint2048_t prime(
+      "e0b11fe18b90816bcd7592f0388d613984aeb62cc639adeecba026a421154b66ef27e6a9"
+      "cf617f930d3b81fd50cc42dadb746f07edb05d57bc6b22e188094bfe38c0967fdd0e09f3"
+      "a2cf06122db2dc9fde2611a362bde15f4c1b7e7fa67272993fa92725efff3df96974dbbc"
+      "448d99919de7c2ec302c6ad8d4536a56b2f334d5");
   EXPECT_TRUE(rsa::RSA::rabin_miller_test(prime));
 }
 
@@ -48,10 +99,8 @@ TEST(PrimeGen, LargePrime) {
 
 TEST(RSA, KeyGeneration) {
   auto [pub_key, priv_key] = rsa::RSA::generate_key_pair();
-  EXPECT_TRUE(pub_key.n > rsa::uint2048_t(0));
-  EXPECT_TRUE(priv_key.n > rsa::uint2048_t(0));
-  EXPECT_TRUE(pub_key.e > rsa::uint2048_t(1));
-  EXPECT_TRUE(priv_key.d > rsa::uint2048_t(1));
+  EXPECT_TRUE(pub_key.n.get_bit(1023)); // Ensure modulus is 1024 bits
+  EXPECT_TRUE(priv_key.n.get_bit(1023));
 }
 
 TEST(RSA, EncryptDecrypt) {

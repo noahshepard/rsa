@@ -6,10 +6,7 @@
 #include <random>
 
 // TODO LIST
-// - Encrypt/Decrypt Functions
-// - I/O Functions
-// - generate_coprime, mod_inverse, mod_exp, and extended_gcd functions
-// - Unit and E2E tests for all RSA functions
+// - Deal with large products being weird.
 
 namespace rsa {
 std::array<uint64_t, 70> PRIMES = {
@@ -37,6 +34,13 @@ std::pair<public_key, private_key> RSA::generate_key_pair() {
   uint2048_t d = mod_inverse(e, phi);
   std::cout << "d: " << d.to_hex_string_trimmed() << std::endl;
 
+  uint2048_t product = e * d;
+  std::cout << "e*d: " << product.to_hex_string_trimmed() << "\n";
+  uint2048_t check = (e * d) % phi;
+  std::cout << "e*d mod phi: " << check.to_hex_string_trimmed() << "\n";
+  std::cout << "gcd(e, phi): "
+            << extended_gcd(e, phi).gcd.to_hex_string_trimmed() << "\n";
+
   return {public_key{e, n}, private_key{d, n}};
 }
 
@@ -63,6 +67,7 @@ uint2048_t RSA::mod_exp(const uint2048_t &a, const uint2048_t &k,
   while (!exp.is_zero()) {
     if (exp.get_bit(0)) {
       result = (result * base) % m;
+      // std::cout << "result: " << result.to_hex_string_trimmed() << "\n";
     }
     base = (base * base) % m;
     exp = exp >> 1;
@@ -79,6 +84,16 @@ gcd_combo RSA::extended_gcd(const uint2048_t &a, const uint2048_t &b) {
 
   while (!y.is_zero()) {
     uint2048_t q = x / y;
+
+    uint2048_t remainder = x % y;
+    uint2048_t check = q * y + remainder;
+    if (check != x) {
+      std::cout << "divmod wrong!\n";
+      std::cout << "x: " << x.to_hex_string_trimmed() << "\n";
+      std::cout << "y: " << y.to_hex_string_trimmed() << "\n";
+      std::cout << "q: " << q.to_hex_string_trimmed() << "\n";
+      std::cout << "rem: " << remainder.to_hex_string_trimmed() << "\n";
+    }
 
     uint2048_t temp_r = y;
     y = x % y;
@@ -112,7 +127,12 @@ uint2048_t RSA::generate_large_prime() {
     uint2048_t candidate = generate_low_level_prime();
 
     if (rabin_miller_test(candidate)) {
+      // std::cout << "Prime found: " << candidate.to_hex_string_trimmed()
+      //           << std::endl;
       return candidate;
+    } else {
+      // std::cout << "Composite found: " << candidate.to_hex_string_trimmed()
+      //           << std::endl;
     }
   }
 }
@@ -144,7 +164,7 @@ bool RSA::rabin_miller_test(const uint2048_t &n) {
   }
 
   for (size_t i = 0; i < RABIN_MILLER_ROUNDS; i++) {
-    uint2048_t a = uint2048_t::random_in_range(uint2048_t(2), n - 2);
+    uint2048_t a = uint2048_t::random_in_range(uint2048_t(2), n - 1);
     if (is_composite(n, a, d, r)) {
       return false;
     }
@@ -155,11 +175,19 @@ bool RSA::rabin_miller_test(const uint2048_t &n) {
 bool RSA::is_composite(const uint2048_t &n, const uint2048_t &a,
                        const uint2048_t &d, size_t r) {
   uint2048_t x = mod_exp(a, d, n);
+
+  /*std::cout << "initial x: " << x.to_hex_string_trimmed() << std::endl;
+  std::cout << "n-1: " << (n - uint2048_t(1)).to_hex_string_trimmed()
+            << std::endl;*/
+
   if (x == 1 || x == n - 1) {
     return false;
   }
   for (size_t i = 1; i < r; i++) {
     x = (x * x) % n;
+    // std::cout << "x after squaring " << i << ": " <<
+    // x.to_hex_string_trimmed()
+    //           << std::endl;
     if (x == n - 1) {
       return false;
     }
@@ -168,10 +196,13 @@ bool RSA::is_composite(const uint2048_t &n, const uint2048_t &a,
 }
 
 uint2048_t RSA::generate_coprime(const uint2048_t &phi) {
+  uint2048_t e(65537);
+  if (extended_gcd(e, phi).gcd == uint2048_t(1)) {
+    return e;
+  }
   while (true) {
-    uint2048_t candidate = uint2048_t::random_in_range(0, phi);
-
-    if (extended_gcd(candidate, phi).gcd == 1) {
+    uint2048_t candidate = uint2048_t::random_in_range(uint2048_t(2), phi);
+    if (extended_gcd(candidate, phi).gcd == uint2048_t(1)) {
       return candidate;
     }
   }

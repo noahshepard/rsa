@@ -216,6 +216,14 @@ bool rsa::uint2048_t::is_zero() const {
   return true;
 }
 
+size_t rsa::uint2048_t::limb_length() const {
+  for (size_t i = LIMBS; i-- > 0;) {
+    if (limbs[i] != 0)
+      return i + 1;
+  }
+  return 0;
+}
+
 size_t rsa::uint2048_t::bit_length() const {
   for (size_t i = LIMBS; i-- > 0;) {
     if (limbs[i] != 0) {
@@ -293,23 +301,105 @@ rsa::uint2048_t::divmod(const rsa::uint2048_t &dividend,
   if (divisor.is_zero()) {
     throw std::invalid_argument("Divide by Zero!");
   }
-
   if (dividend < divisor) {
-    return {0, dividend};
+    return {uint2048_t(0), dividend};
   }
+
+  const __uint128_t b = (__uint128_t)1 << LIMB_BITS;
+  __uint128_t qhat, rhat, product;
+  size_t m = dividend.limb_length();
+  size_t n = divisor.limb_length();
 
   rsa::uint2048_t quotient = 0;
   rsa::uint2048_t remainder = 0;
 
-  size_t bits = dividend.bit_length();
-  for (size_t i = bits; i-- > 0;) {
-    remainder = remainder << 1;
-    remainder.set_bit(0, dividend.get_bit(i));
+  // single digit divisor fast path
+  if (n == 1) {
+    __uint128_t k = 0;
+    for (size_t j = m; j-- > 0;) {
+      __uint128_t cur = k * b + dividend.limbs[j];
+      quotient.limbs[j] = (uint64_t)(cur / divisor.limbs[0]);
+      k = cur % divisor.limbs[0];
+    }
+    remainder.limbs[0] = (uint64_t)k;
+    return {quotient, remainder};
+  }
 
-    if (remainder >= divisor) {
-      remainder = remainder - divisor;
-      quotient.set_bit(i, 1);
+  // normalize divisor so top bit of limbs[n-1] is set
+  size_t shift = __builtin_clzll(divisor.limbs[n - 1]);
+
+  uint2048_t vn = 0;
+  for (size_t i = n - 1; i > 0; i--) {
+    vn.limbs[i] = divisor.limbs[i] << shift;
+    if (shift > 0)
+      vn.limbs[i] |= (uint64_t)(((__uint128_t)divisor.limbs[i - 1]) >>
+                                (LIMB_BITS - shift));
+  }
+  vn.limbs[0] = divisor.limbs[0] << shift;
+
+  // normalize dividend — one extra limb at top
+  uint2048_t un = 0;
+  un.limbs[m] = shift > 0 ? dividend.limbs[m - 1] >> (LIMB_BITS - shift) : 0;
+  for (size_t i = m - 1; i > 0; i--) {
+    un.limbs[i] = dividend.limbs[i] << shift;
+    if (shift > 0)
+      un.limbs[i] |= (uint64_t)(((__uint128_t)dividend.limbs[i - 1]) >>
+                                (LIMB_BITS - shift));
+  }
+  un.limbs[0] = dividend.limbs[0] << shift;
+
+  // main loop
+  for (size_t j = m - n + 1; j-- > 0;) {
+    // estimate quotient digit
+    qhat = ((__uint128_t)un.limbs[j + n] * b + un.limbs[j + n - 1]) /
+           vn.limbs[n - 1];
+    rhat = ((__uint128_t)un.limbs[j + n] * b + un.limbs[j + n - 1]) -
+           qhat * vn.limbs[n - 1];
+
+    // refine estimate
+    while (qhat >= b ||
+           qhat * vn.limbs[n - 2] > b * rhat + un.limbs[j + n - 2]) {
+      qhat -= 1;
+      rhat += vn.limbs[n - 1];
+      if (rhat >= b)
+        break;
+    }
+
+    // multiply and subtract
+    __int128_t k = 0;
+    for (size_t i = 0; i < n; i++) {
+      product = qhat * vn.limbs[i];
+      __int128_t sub = (__int128_t)un.limbs[i + j] -
+                       (uint64_t)(product & 0xFFFFFFFFFFFFFFFFULL) - k;
+      un.limbs[i + j] = (uint64_t)sub;
+      k = (uint64_t)(product >> LIMB_BITS) - (sub >> LIMB_BITS);
+    }
+    __int128_t top = (__int128_t)un.limbs[j + n] - k;
+    un.limbs[j + n] = (uint64_t)top;
+    quotient.limbs[j] = (uint64_t)qhat;
+
+    // add back if over-subtracted
+    if (top < 0) {
+      quotient.limbs[j] -= 1;
+      __uint128_t carry = 0;
+      for (size_t i = 0; i < n; i++) {
+        __uint128_t sum = (__uint128_t)un.limbs[i + j] + vn.limbs[i] + carry;
+        un.limbs[i + j] = (uint64_t)sum;
+        carry = sum >> LIMB_BITS;
+      }
+      un.limbs[j + n] += (uint64_t)carry;
     }
   }
+
+  // unnormalize remainder
+  for (size_t i = 0; i < n - 1; i++) {
+    remainder.limbs[i] = un.limbs[i] >> shift;
+    if (shift > 0)
+      remainder.limbs[i] |=
+          (uint64_t)(((__uint128_t)un.limbs[i + 1]) << (LIMB_BITS - shift));
+  }
+
+  remainder.limbs[n - 1] = un.limbs[n - 1] >> shift;
+
   return {quotient, remainder};
 }
