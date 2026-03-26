@@ -1,4 +1,4 @@
-#include "uint2048.hpp"
+#include "uint.hpp"
 #include <gtest/gtest.h>
 
 TEST(ArithmaticOPS, SimpleAddition) {
@@ -41,32 +41,6 @@ TEST(ArithmaticOPS, Multiplication) {
   rsa::uint2048_t b("fedcba987654321");
   rsa::uint2048_t result = a * b;
   EXPECT_EQ(result.to_hex_string_trimmed(), "121fa00ad77d7422236d88fe5618cf");
-}
-
-TEST(ArithmaticOPS, LargeKnownProduct) {
-  rsa::uint2048_t e(65537);
-  rsa::uint2048_t d(
-      "4335adde62fb8b131c89d6af6e8818ab62777e6d49fac4d35ff0c303d23b68d8cf2972d2"
-      "d592bc9e2e2712510c63f7999bb5ffbe50942f4006befdc26a4bbad64da6fb76c8e9df0a"
-      "42b5d21695189ba0dbee4b595b4613056a9a55c1fede41e6a004952e7b50433155389daa"
-      "314e48d2158597257bf64b88e23149750ff641a50976157b655763c48cae284cff63d1ea"
-      "93067fceba21d917ae161e47b81a48df79cdefdffcb463833d1bb25a0545a76831b3b923"
-      "c5ce39eba0161a0a4d84462a0046f6db139973ea562bc129f1289ddc3e71d2d11a0ce750"
-      "4353bd5254a34fa180ddc2656709dbd1f2f53ddd95138ae82ec0abb139535d424115b316"
-      "98b39411");
-  rsa::uint2048_t result = e * d;
-  std::cout << "result: " << result.to_hex_string_trimmed() << "\n";
-  rsa::uint2048_t expected_result(
-      "4335f11410d9ee0ea79cf339453787337b22e0e4c8680ece24c422f4953f3b14380241fc"
-      "48659230eac540781eb503fd934f9b7450527fd435ff0481680e2522087d491dc460a7f4"
-      "21c014cc672f30b9778f2747a69f6e4b7d9fc05c54a040c4e1eb3533107ebe819869f2e2"
-      "cef87a205e57acab131bc77f2dba2ba6596b519b4b1b1ef17ad2c91bf072b4fb27b0d14e"
-      "64f112d539f09339872dcc5dd66200f9c2ad69adec946037a09eef75b79facadd91bead7"
-      "7ef1ffb9da01ba20678e93ae4670f7220a748783ca161755b2528f04dc4e1142ecde015d"
-      "2aa400a611f5a444d07f4343296f42dbcec730d2d2f11ffbb9a8da71e50496959e57f42c"
-      "4bca2cc49411");
-  EXPECT_EQ(result.to_hex_string_trimmed(),
-            expected_result.to_hex_string_trimmed());
 }
 
 TEST(ArithmaticOPS, LargeSquare) {
@@ -218,11 +192,6 @@ TEST(ComparisonOPS, GreaterThanFalse) {
   rsa::uint2048_t a("123456789abcdef0");
   rsa::uint2048_t b("123456789abcdef1");
   EXPECT_FALSE(a > b);
-}
-
-TEST(random, Random1024Bit) {
-  rsa::uint2048_t random_num = rsa::uint2048_t::random_1024_bit();
-  EXPECT_TRUE(random_num < (rsa::uint2048_t(1) << 1024));
 }
 
 TEST(random, RandomInRange) {

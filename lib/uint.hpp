@@ -1,17 +1,109 @@
-#include "uint2048.hpp"
+#ifndef UINT
+#define UINT
+
+#include <array>
 #include <charconv>
+#include <cstdint>
 #include <format>
 #include <iostream>
 #include <random>
 #include <stdexcept>
+#include <string>
+#include <utility>
 
-// Constructors
-rsa::uint2048_t::uint2048_t() {}
-rsa::uint2048_t::uint2048_t(uint64_t val) { limbs = {val}; }
-rsa::uint2048_t::uint2048_t(const std::string &hex) {
+namespace rsa {
+template <size_t N>
+class uint_t {
+public:
+  static constexpr size_t BITS = N;
+  static constexpr size_t LIMB_BITS = 64;        // must divide BITS
+  static constexpr size_t LIMBS = N / LIMB_BITS; // 32
+
+  static_assert(N % LIMB_BITS == 0, "N must be a multiple of 64");
+  static_assert(N > 0, "N must be greater than 0");
+
+  template <size_t M>
+  friend class uint_t;
+
+  //-------------------Constructors-------------------
+  uint_t();
+  uint_t(uint64_t val);
+  explicit uint_t(const std::string &hex);
+
+  template <size_t M>
+  uint_t(const uint_t<M> &other);
+
+  uint_t(const uint_t &other);
+  uint_t &operator=(const uint_t &other);
+
+  uint_t(uint_t &&other) = default;
+  uint_t &operator=(uint_t &&other) = default;
+
+  ~uint_t() = default;
+
+  //---------------Arithmatic Operators---------------
+
+  uint_t operator+(const uint_t &rhs) const;
+  uint_t operator-(const uint_t &rhs) const;
+  uint_t operator*(const uint_t &rhs) const;
+  uint_t operator/(const uint_t &rhs) const;
+  uint_t operator%(const uint_t &rhs) const;
+
+  //-----------------Bitwise Operators-----------------
+  uint_t operator<<(size_t shift) const;
+  uint_t operator>>(size_t shift) const;
+  uint_t operator&(const uint_t &rhs) const;
+  uint_t operator|(const uint_t &rhs) const;
+  uint_t operator^(const uint_t &rhs) const;
+  uint_t operator~() const;
+
+  //-------------------Comparison Operators-----------------
+  bool operator==(const uint_t &rhs) const;
+  bool operator!=(const uint_t &rhs) const;
+  bool operator>=(const uint_t &rhs) const;
+  bool operator<=(const uint_t &rhs) const;
+  bool operator<(const uint_t &rhs) const;
+  bool operator>(const uint_t &rhs) const;
+
+  //-----------------Utility Functions-----------------
+
+  std::string to_hex_string() const;
+
+  std::string to_hex_string_trimmed() const;
+
+  bool is_zero() const;
+
+  size_t limb_length() const;
+
+  size_t bit_length() const;
+
+  bool get_bit(size_t bit) const;
+  void set_bit(size_t bit, bool val);
+
+  static uint_t random_in_range(const uint_t &min, const uint_t &max);
+
+private:
+  std::unique_ptr<uint64_t[]> limbs = std::make_unique<uint64_t[]>(LIMBS);
+
+  static std::pair<uint_t, uint_t> divmod(const uint_t &dividend,
+                                          const uint_t &divisor);
+};
+
+template <size_t N>
+uint_t<N>::uint_t() {}
+
+template <size_t N>
+uint_t<N>::uint_t(uint64_t val) {
+  std::fill(limbs.get(), limbs.get() + LIMBS, 0);
+  limbs[0] = val;
+}
+
+template <size_t N>
+uint_t<N>::uint_t(const std::string &hex) {
 
   if (hex.length() > LIMBS * 16) {
-    throw std::invalid_argument("Input string must be shorter than 256 bytes");
+    throw std::invalid_argument(
+        std::format("Input string must be shorter than {} bytes", LIMBS * 8));
   }
 
   for (size_t i = 0; i < hex.length(); i += 16) {
@@ -22,9 +114,33 @@ rsa::uint2048_t::uint2048_t(const std::string &hex) {
   }
 }
 
+template <size_t N>
+template <size_t M>
+uint_t<N>::uint_t(const uint_t<M> &other) {
+  std::fill(limbs.get(), limbs.get() + LIMBS, 0);
+  constexpr size_t copy_limbs = (M < N) ? (M / LIMB_BITS) : LIMBS;
+  for (size_t i = 0; i < copy_limbs; i++) {
+    limbs[i] = other.limbs[i];
+  }
+}
+
+template <size_t N>
+uint_t<N>::uint_t(const uint_t &other) {
+  std::copy(other.limbs.get(), other.limbs.get() + LIMBS, limbs.get());
+}
+
+template <size_t N>
+uint_t<N> &uint_t<N>::operator=(const uint_t &other) {
+  if (this != &other) {
+    std::copy(other.limbs.get(), other.limbs.get() + LIMBS, limbs.get());
+  }
+  return *this;
+}
+
 // Operators
-rsa::uint2048_t rsa::uint2048_t::operator+(const rsa::uint2048_t &rhs) const {
-  rsa::uint2048_t result;
+template <size_t N>
+uint_t<N> uint_t<N>::operator+(const uint_t<N> &rhs) const {
+  uint_t result;
   size_t carry = 0;
   for (size_t i = 0; i < LIMBS; i++) {
     uint64_t sum = limbs[i] + rhs.limbs[i];
@@ -39,8 +155,9 @@ rsa::uint2048_t rsa::uint2048_t::operator+(const rsa::uint2048_t &rhs) const {
   return result;
 }
 
-rsa::uint2048_t rsa::uint2048_t::operator-(const rsa::uint2048_t &rhs) const {
-  rsa::uint2048_t result;
+template <size_t N>
+uint_t<N> uint_t<N>::operator-(const uint_t<N> &rhs) const {
+  uint_t result;
   size_t borrow = 0;
   for (size_t i = 0; i < LIMBS; i++) {
     uint64_t diff = limbs[i] - rhs.limbs[i];
@@ -54,8 +171,9 @@ rsa::uint2048_t rsa::uint2048_t::operator-(const rsa::uint2048_t &rhs) const {
   return result;
 }
 
-rsa::uint2048_t rsa::uint2048_t::operator*(const rsa::uint2048_t &rhs) const {
-  rsa::uint2048_t result;
+template <size_t N>
+uint_t<N> uint_t<N>::operator*(const uint_t<N> &rhs) const {
+  uint_t result;
   for (size_t i = 0; i < LIMBS; i++) {
     if (limbs[i] == 0)
       continue;
@@ -70,17 +188,20 @@ rsa::uint2048_t rsa::uint2048_t::operator*(const rsa::uint2048_t &rhs) const {
   return result;
 }
 
-rsa::uint2048_t rsa::uint2048_t::operator/(const uint2048_t &rhs) const {
+template <size_t N>
+uint_t<N> uint_t<N>::operator/(const uint_t<N> &rhs) const {
   return divmod(*this, rhs).first;
 }
 
-rsa::uint2048_t rsa::uint2048_t::operator%(const uint2048_t &rhs) const {
+template <size_t N>
+uint_t<N> uint_t<N>::operator%(const uint_t<N> &rhs) const {
   return divmod(*this, rhs).second;
 }
 
 // Bitwise Operators
-rsa::uint2048_t rsa::uint2048_t::operator<<(size_t shift) const {
-  uint2048_t result;
+template <size_t N>
+uint_t<N> uint_t<N>::operator<<(size_t shift) const {
+  uint_t result;
   size_t limb_shift = shift / LIMB_BITS;
   size_t bit_shift = shift % LIMB_BITS;
 
@@ -97,8 +218,9 @@ rsa::uint2048_t rsa::uint2048_t::operator<<(size_t shift) const {
   return result;
 }
 
-rsa::uint2048_t rsa::uint2048_t::operator>>(size_t shift) const {
-  uint2048_t result;
+template <size_t N>
+uint_t<N> uint_t<N>::operator>>(size_t shift) const {
+  uint_t result;
   size_t limb_shift = shift / LIMB_BITS;
   size_t bit_shift = shift % LIMB_BITS;
 
@@ -115,39 +237,44 @@ rsa::uint2048_t rsa::uint2048_t::operator>>(size_t shift) const {
   return result;
 }
 
-rsa::uint2048_t rsa::uint2048_t::operator&(const rsa::uint2048_t &rhs) const {
-  rsa::uint2048_t result;
+template <size_t N>
+uint_t<N> uint_t<N>::operator&(const uint_t<N> &rhs) const {
+  uint_t result;
   for (size_t i = 0; i < LIMBS; i++) {
     result.limbs[i] = limbs[i] & rhs.limbs[i];
   }
   return result;
 }
 
-rsa::uint2048_t rsa::uint2048_t::operator|(const rsa::uint2048_t &rhs) const {
-  rsa::uint2048_t result;
+template <size_t N>
+uint_t<N> uint_t<N>::operator|(const uint_t<N> &rhs) const {
+  uint_t result;
   for (size_t i = 0; i < LIMBS; i++) {
     result.limbs[i] = limbs[i] | rhs.limbs[i];
   }
   return result;
 }
 
-rsa::uint2048_t rsa::uint2048_t::operator^(const rsa::uint2048_t &rhs) const {
-  rsa::uint2048_t result;
+template <size_t N>
+uint_t<N> uint_t<N>::operator^(const uint_t<N> &rhs) const {
+  uint_t result;
   for (size_t i = 0; i < LIMBS; i++) {
     result.limbs[i] = limbs[i] ^ rhs.limbs[i];
   }
   return result;
 }
 
-rsa::uint2048_t rsa::uint2048_t::operator~() const {
-  rsa::uint2048_t result;
+template <size_t N>
+uint_t<N> uint_t<N>::operator~() const {
+  uint_t result;
   for (size_t i = 0; i < LIMBS; i++) {
     result.limbs[i] = ~limbs[i];
   }
   return result;
 }
 // Comparison Operators
-bool rsa::uint2048_t::operator==(const rsa::uint2048_t &rhs) const {
+template <size_t N>
+bool uint_t<N>::operator==(const uint_t<N> &rhs) const {
   for (size_t i = 0; i < LIMBS; i++) {
     if (limbs[i] != rhs.limbs[i]) {
       return false;
@@ -156,12 +283,14 @@ bool rsa::uint2048_t::operator==(const rsa::uint2048_t &rhs) const {
   return true;
 }
 
-bool rsa::uint2048_t::operator!=(const rsa::uint2048_t &rhs) const {
+template <size_t N>
+bool uint_t<N>::operator!=(const uint_t<N> &rhs) const {
   return !(*this == rhs);
 }
 
-bool rsa::uint2048_t::operator<(const rsa::uint2048_t &rhs) const {
-  for (size_t i = LIMBS - 1; i-- > 0;) {
+template <size_t N>
+bool uint_t<N>::operator<(const uint_t<N> &rhs) const {
+  for (size_t i = LIMBS; i-- > 0;) {
     if (limbs[i] < rhs.limbs[i]) {
       return true;
     } else if (limbs[i] > rhs.limbs[i]) {
@@ -171,8 +300,9 @@ bool rsa::uint2048_t::operator<(const rsa::uint2048_t &rhs) const {
   return false;
 }
 
-bool rsa::uint2048_t::operator>(const rsa::uint2048_t &rhs) const {
-  for (size_t i = LIMBS - 1; i-- > 0;) {
+template <size_t N>
+bool uint_t<N>::operator>(const uint_t<N> &rhs) const {
+  for (size_t i = LIMBS; i-- > 0;) {
     if (limbs[i] > rhs.limbs[i]) {
       return true;
     } else if (limbs[i] < rhs.limbs[i]) {
@@ -182,17 +312,20 @@ bool rsa::uint2048_t::operator>(const rsa::uint2048_t &rhs) const {
   return false;
 }
 
-bool rsa::uint2048_t::operator<=(const rsa::uint2048_t &rhs) const {
+template <size_t N>
+bool uint_t<N>::operator<=(const uint_t<N> &rhs) const {
   return !(*this > rhs);
 }
 
-bool rsa::uint2048_t::operator>=(const rsa::uint2048_t &rhs) const {
+template <size_t N>
+bool uint_t<N>::operator>=(const uint_t<N> &rhs) const {
   return !(*this < rhs);
 }
 
 // Utility
-std::string rsa::uint2048_t::to_hex_string() const {
-  std::string hex(512, '0');
+template <size_t N>
+std::string uint_t<N>::to_hex_string() const {
+  std::string hex(LIMBS * 16, '0');
 
   for (size_t i = 0; i < LIMBS; i++) {
     snprintf(hex.data() + i * 16, 17, "%016llx", limbs[LIMBS - 1 - i]);
@@ -201,13 +334,15 @@ std::string rsa::uint2048_t::to_hex_string() const {
   return hex;
 }
 
-std::string rsa::uint2048_t::to_hex_string_trimmed() const {
+template <size_t N>
+std::string uint_t<N>::to_hex_string_trimmed() const {
   std::string hex = to_hex_string();
   size_t start = hex.find_first_not_of('0');
   return (start == std::string::npos) ? "0" : hex.substr(start);
 }
 
-bool rsa::uint2048_t::is_zero() const {
+template <size_t N>
+bool uint_t<N>::is_zero() const {
   for (size_t i = 0; i < LIMBS; i++) {
     if (limbs[i] != 0) {
       return false;
@@ -216,7 +351,8 @@ bool rsa::uint2048_t::is_zero() const {
   return true;
 }
 
-size_t rsa::uint2048_t::limb_length() const {
+template <size_t N>
+size_t uint_t<N>::limb_length() const {
   for (size_t i = LIMBS; i-- > 0;) {
     if (limbs[i] != 0)
       return i + 1;
@@ -224,7 +360,8 @@ size_t rsa::uint2048_t::limb_length() const {
   return 0;
 }
 
-size_t rsa::uint2048_t::bit_length() const {
+template <size_t N>
+size_t uint_t<N>::bit_length() const {
   for (size_t i = LIMBS; i-- > 0;) {
     if (limbs[i] != 0) {
       for (size_t b = LIMB_BITS; b-- > 0;) {
@@ -237,7 +374,8 @@ size_t rsa::uint2048_t::bit_length() const {
   return 0;
 }
 
-bool rsa::uint2048_t::get_bit(size_t bit) const {
+template <size_t N>
+bool uint_t<N>::get_bit(size_t bit) const {
   if (bit >= BITS) {
     throw std::out_of_range(
         std::format("get_bit: Bit index {} out of range", bit));
@@ -247,7 +385,8 @@ bool rsa::uint2048_t::get_bit(size_t bit) const {
   return (limbs[limb_index] >> bit_index) & uint64_t(1);
 }
 
-void rsa::uint2048_t::set_bit(size_t bit, bool val) {
+template <size_t N>
+void uint_t<N>::set_bit(size_t bit, bool val) {
   if (bit >= BITS) {
     throw std::out_of_range(
         std::format("set_bit: Bit index {} out of range", bit));
@@ -261,28 +400,18 @@ void rsa::uint2048_t::set_bit(size_t bit, bool val) {
   }
 }
 
-rsa::uint2048_t rsa::uint2048_t::random_1024_bit() {
-  uint2048_t result;
-  std::random_device rd;
-  for (size_t i = 0; i < LIMBS / 2; i++) {
-    uint64_t high = rd();
-    uint64_t low = rd();
-    result.limbs[i] = (high << 32) | low;
-  }
-  return result;
-}
-
-rsa::uint2048_t rsa::uint2048_t::random_in_range(const rsa::uint2048_t &min,
-                                                 const rsa::uint2048_t &max) {
+template <size_t N>
+uint_t<N> uint_t<N>::random_in_range(const uint_t<N> &min,
+                                     const uint_t<N> &max) {
   if (min >= max) {
     throw std::invalid_argument("min must be less than max");
   }
 
   std::random_device rd;
-  uint2048_t range = max - min;
+  uint_t<N> range = max - min;
 
   while (true) {
-    uint2048_t candidate;
+    uint_t<N> candidate;
     for (size_t i = 0; i < LIMBS; i++) {
       uint64_t high = rd();
       uint64_t low = rd();
@@ -295,14 +424,14 @@ rsa::uint2048_t rsa::uint2048_t::random_in_range(const rsa::uint2048_t &min,
   }
 }
 
-std::pair<rsa::uint2048_t, rsa::uint2048_t>
-rsa::uint2048_t::divmod(const rsa::uint2048_t &dividend,
-                        const rsa::uint2048_t &divisor) {
+template <size_t N>
+std::pair<uint_t<N>, uint_t<N>> uint_t<N>::divmod(const uint_t<N> &dividend,
+                                                  const uint_t<N> &divisor) {
   if (divisor.is_zero()) {
     throw std::invalid_argument("Divide by Zero!");
   }
   if (dividend < divisor) {
-    return {uint2048_t(0), dividend};
+    return {uint_t<N>(0), dividend};
   }
 
   const __uint128_t b = (__uint128_t)1 << LIMB_BITS;
@@ -310,8 +439,8 @@ rsa::uint2048_t::divmod(const rsa::uint2048_t &dividend,
   size_t m = dividend.limb_length();
   size_t n = divisor.limb_length();
 
-  rsa::uint2048_t quotient = 0;
-  rsa::uint2048_t remainder = 0;
+  uint_t<N> quotient = 0;
+  uint_t<N> remainder = 0;
 
   // single digit divisor fast path
   if (n == 1) {
@@ -328,7 +457,7 @@ rsa::uint2048_t::divmod(const rsa::uint2048_t &dividend,
   // normalize divisor so top bit of limbs[n-1] is set
   size_t shift = __builtin_clzll(divisor.limbs[n - 1]);
 
-  uint2048_t vn = 0;
+  uint_t<N> vn = 0;
   for (size_t i = n - 1; i > 0; i--) {
     vn.limbs[i] = divisor.limbs[i] << shift;
     if (shift > 0)
@@ -338,7 +467,7 @@ rsa::uint2048_t::divmod(const rsa::uint2048_t &dividend,
   vn.limbs[0] = divisor.limbs[0] << shift;
 
   // normalize dividend — one extra limb at top
-  uint2048_t un = 0;
+  uint_t<N + LIMB_BITS> un = 0;
   un.limbs[m] = shift > 0 ? dividend.limbs[m - 1] >> (LIMB_BITS - shift) : 0;
   for (size_t i = m - 1; i > 0; i--) {
     un.limbs[i] = dividend.limbs[i] << shift;
@@ -403,3 +532,9 @@ rsa::uint2048_t::divmod(const rsa::uint2048_t &dividend,
 
   return {quotient, remainder};
 }
+
+using uint2048_t = uint_t<2048>;
+using uint4096_t = uint_t<4096>;
+
+} // namespace rsa
+#endif // UINT2048

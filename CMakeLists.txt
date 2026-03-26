@@ -7,23 +7,26 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(GTest REQUIRED)
 
-add_library(rsa_lib
-    lib/uint2048.cpp
-    lib/int2048.cpp
-    lib/rsa.cpp
+add_library(int_lib INTERFACE)
+target_include_directories(int_lib INTERFACE lib)
 
+
+add_library(rsa_lib
+    lib/rsa.cpp
 )
-target_include_directories(rsa_lib PUBLIC lib
-)
+target_link_libraries(rsa_lib PRIVATE int_lib)
+target_include_directories(rsa_lib PUBLIC src)
+
 
 add_executable(rsa_tests
-    tests/uint2048_tests.cpp
     tests/rsa_tests.cpp
+    tests/uint_tests.cpp
 )
 
 target_link_libraries(rsa_tests
     PRIVATE 
-    rsa_lib 
+    int_lib
+    rsa_lib
     GTest::gtest_main
 )
 
@@ -41,10 +44,21 @@ add_executable(rsa_app
     src/main.cpp
 )
 
+target_compile_options(rsa_app PRIVATE 
+    -Wall 
+    -Wextra 
+    -Wpedantic
+    -Werror
+    -fsanitize=address -g
+)
+
 target_link_libraries(rsa_app
     PRIVATE
+    int_lib
     rsa_lib
 )
+
+target_link_options(rsa_app PRIVATE -fsanitize=address)
 
 include(GoogleTest)
 gtest_discover_tests(rsa_tests)

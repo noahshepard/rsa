@@ -1,6 +1,6 @@
 #include "rsa.hpp"
-#include "int2048.hpp"
-#include "uint2048.hpp"
+#include "int.hpp"
+#include "uint.hpp"
 #include <array>
 #include <iostream>
 #include <random>
@@ -34,9 +34,9 @@ std::pair<public_key, private_key> RSA::generate_key_pair() {
   uint2048_t d = mod_inverse(e, phi);
   std::cout << "d: " << d.to_hex_string_trimmed() << std::endl;
 
-  uint2048_t product = e * d;
+  uint4096_t product = uint4096_t(e * d);
   std::cout << "e*d: " << product.to_hex_string_trimmed() << "\n";
-  uint2048_t check = (e * d) % phi;
+  uint2048_t check = (e * d) % uint4096_t(phi);
   std::cout << "e*d mod phi: " << check.to_hex_string_trimmed() << "\n";
   std::cout << "gcd(e, phi): "
             << extended_gcd(e, phi).gcd.to_hex_string_trimmed() << "\n";
@@ -60,9 +60,9 @@ uint2048_t RSA::mod_exp(const uint2048_t &a, const uint2048_t &k,
     throw std::invalid_argument("Modulo by zero");
   }
 
-  uint2048_t result = 1;
-  uint2048_t base = a % m;
-  uint2048_t exp = k;
+  uint4096_t result = 1;
+  uint4096_t base = a % m;
+  uint4096_t exp = k;
 
   while (!exp.is_zero()) {
     if (exp.get_bit(0)) {
@@ -72,21 +72,21 @@ uint2048_t RSA::mod_exp(const uint2048_t &a, const uint2048_t &k,
     base = (base * base) % m;
     exp = exp >> 1;
   }
-  return result;
+  return uint2048_t(result);
 }
 
 gcd_combo RSA::extended_gcd(const uint2048_t &a, const uint2048_t &b) {
-  uint2048_t x = a;
-  uint2048_t y = b;
+  uint4096_t x = uint4096_t(a);
+  uint4096_t y = uint4096_t(b);
 
-  int2048_t old_s(1), s(0);
-  int2048_t old_t(0), t(1);
+  int4096_t old_s(1), s(0);
+  int4096_t old_t(0), t(1);
 
   while (!y.is_zero()) {
-    uint2048_t q = x / y;
+    uint4096_t q = x / y;
 
-    uint2048_t remainder = x % y;
-    uint2048_t check = q * y + remainder;
+    uint4096_t remainder = x % y;
+    uint4096_t check = q * y + remainder;
     if (check != x) {
       std::cout << "divmod wrong!\n";
       std::cout << "x: " << x.to_hex_string_trimmed() << "\n";
@@ -95,19 +95,19 @@ gcd_combo RSA::extended_gcd(const uint2048_t &a, const uint2048_t &b) {
       std::cout << "rem: " << remainder.to_hex_string_trimmed() << "\n";
     }
 
-    uint2048_t temp_r = y;
+    uint4096_t temp_r = y;
     y = x % y;
     x = temp_r;
 
-    int2048_t temp_s = s;
-    s = old_s - int2048_t(q) * s;
+    int4096_t temp_s = s;
+    s = old_s - int4096_t(q) * s;
     old_s = temp_s;
 
-    int2048_t temp_t = t;
-    t = old_t - int2048_t(q) * t;
+    int4096_t temp_t = t;
+    t = old_t - int4096_t(q) * t;
     old_t = temp_t;
   }
-  return {x, old_s, old_t};
+  return {uint2048_t(x), int2048_t(old_s), int2048_t(old_t)};
 }
 
 uint2048_t RSA::mod_inverse(const uint2048_t &a, const uint2048_t &m) {
@@ -139,9 +139,9 @@ uint2048_t RSA::generate_large_prime() {
 
 uint2048_t RSA::generate_low_level_prime() {
   while (true) {
-    uint2048_t canditate = uint2048_t::random_1024_bit();
-    canditate.set_bit(1023, 1); // Ensure it's 1024 bits
-    canditate.set_bit(0, 1);    // Ensure it's odd
+    uint2048_t canditate = uint2048_t::random_in_range(
+        uint2048_t(1) << 1023, (uint2048_t(1) << 1024) - 1);
+    canditate.set_bit(0, 1); // Ensure it's odd
     bool is_prime = true;
     for (size_t i = 0; i < PRIMES.size(); i++) {
       if (canditate % uint2048_t(PRIMES[i]) == 0) {

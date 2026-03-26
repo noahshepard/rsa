@@ -1,8 +1,8 @@
 #ifndef RSA_H
 #define RSA_H
 
-#include "int2048.hpp"
-#include "uint2048.hpp"
+#include "int.hpp"
+#include "uint.hpp"
 
 namespace rsa {
 
