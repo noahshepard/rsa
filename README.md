@@ -10,13 +10,13 @@ A simple RSA API
 ## Usage 
 
 ### Building 
-Build using CMake
-`cmake -S . -B build` 
-`cmake --build build`  
+Build using CMake\
+`cmake -S . -B build` \
+`cmake --build build` \
 *Note: Default build requires google test to be installed*
 
 ### Key Generation 
-Generate a public/private key pair to files with 
+Generate a public/private key pair to files with \
 `./build/keygen <public-key-file> <private-key-file>` 
 
 ### Encryption/Decryption 
