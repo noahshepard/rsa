@@ -12,6 +12,8 @@
 #include <utility>
 
 namespace rsa {
+enum class string_format { hex = 0, bytes };
+
 template <size_t N>
 class uint_t {
 public:
@@ -28,7 +30,8 @@ public:
   //-------------------Constructors-------------------
   uint_t();
   uint_t(uint64_t val);
-  explicit uint_t(const std::string &hex);
+  explicit uint_t(const std::string &str,
+                  string_format fmt = string_format::hex);
 
   template <size_t M>
   uint_t(const uint_t<M> &other);
@@ -71,6 +74,8 @@ public:
 
   std::string to_hex_string_trimmed() const;
 
+  std::string to_byte_string() const;
+
   bool is_zero() const;
 
   size_t limb_length() const;
@@ -99,18 +104,28 @@ uint_t<N>::uint_t(uint64_t val) {
 }
 
 template <size_t N>
-uint_t<N>::uint_t(const std::string &hex) {
+uint_t<N>::uint_t(const std::string &str, string_format fmt) {
+  if (fmt == string_format::hex) {
+    if (str.length() > LIMBS * 16) {
+      throw std::invalid_argument(
+          std::format("Input string must be shorter than {} bytes", LIMBS * 8));
+    }
 
-  if (hex.length() > LIMBS * 16) {
-    throw std::invalid_argument(
-        std::format("Input string must be shorter than {} bytes", LIMBS * 8));
-  }
+    for (size_t i = 0; i < str.length(); i += 16) {
+      size_t chunk_end = str.length() - i;
+      size_t chunk_start = (chunk_end >= 16) ? chunk_end - 16 : 0;
+      std::from_chars(str.data() + chunk_start, str.data() + chunk_end,
+                      limbs[i / 16], 16);
+    }
+  } else {
+    if (str.length() > BITS / 8) {
+      throw std::invalid_argument(
+          std::format("Input string must be no more than {} chars", BITS / 8));
+    }
 
-  for (size_t i = 0; i < hex.length(); i += 16) {
-    size_t chunk_end = hex.length() - i;
-    size_t chunk_start = (chunk_end >= 16) ? chunk_end - 16 : 0;
-    std::from_chars(hex.data() + chunk_start, hex.data() + chunk_end,
-                    limbs[i / 16], 16);
+    for (size_t i = 0; i < str.length(); i++) {
+      limbs[i / 8] |= (uint64_t)(unsigned char)str[i] << ((i % 8) * 8);
+    }
   }
 }
 
@@ -339,6 +354,18 @@ std::string uint_t<N>::to_hex_string_trimmed() const {
   std::string hex = to_hex_string();
   size_t start = hex.find_first_not_of('0');
   return (start == std::string::npos) ? "0" : hex.substr(start);
+}
+
+template <size_t N>
+std::string uint_t<N>::to_byte_string() const {
+  std::string result;
+  for (size_t i = 0; i < 256; i++) {
+    char c = (char)(limbs[i / 8] >> ((i % 8) * 8));
+    if (c == 0)
+      break; // stop at null terminator
+    result += c;
+  }
+  return result;
 }
 
 template <size_t N>

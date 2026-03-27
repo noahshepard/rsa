@@ -15,7 +15,7 @@ add_library(rsa_lib
     lib/rsa.cpp
 )
 target_link_libraries(rsa_lib PRIVATE int_lib)
-target_include_directories(rsa_lib PUBLIC src)
+
 
 
 add_executable(rsa_tests
@@ -40,25 +40,32 @@ target_compile_options(rsa_tests PRIVATE
 
 target_link_options(rsa_tests PRIVATE -fsanitize=address)
 
-add_executable(rsa_app 
-    src/main.cpp
+add_executable(key_gen
+    src/keygen.cpp
 )
 
-target_compile_options(rsa_app PRIVATE 
-    -Wall 
-    -Wextra 
-    -Wpedantic
-    -Werror
-    -fsanitize=address -g
-)
-
-target_link_libraries(rsa_app
-    PRIVATE
+target_link_libraries(key_gen
     int_lib
     rsa_lib
 )
 
-target_link_options(rsa_app PRIVATE -fsanitize=address)
+add_executable(encrypt
+    src/encrypt.cpp
+)
+
+target_link_libraries(encrypt
+    int_lib
+    rsa_lib
+)
+
+add_executable(decrypt
+    src/decrypt.cpp
+)
+
+target_link_libraries(decrypt
+    int_lib
+    rsa_lib
+)
 
 include(GoogleTest)
 gtest_discover_tests(rsa_tests)

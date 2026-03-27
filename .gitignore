@@ -45,3 +45,6 @@
 
 #vscode settings
 /.vscode 
+
+#clang format file
+.clang-format
