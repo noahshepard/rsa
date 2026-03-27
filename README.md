@@ -20,9 +20,9 @@ Generate a public/private key pair to files with
 `./build/keygen <public-key-file> <private-key-file>` 
 
 ### Encryption/Decryption 
-Once keys have been generated encrypt/decrypt using 
-`./build/encrypt <public-key-file> <message-file> <cyphertext-file>`
-`./build/decrypt <private-key-file> <cyphertext-file> <message-file>`
+Once keys have been generated encrypt/decrypt using \
+`./build/encrypt <public-key-file> <message-file> <cyphertext-file>`\
+`./build/decrypt <private-key-file> <cyphertext-file> <message-file>`\
 *Note: files must be less than 256 characters in size*
 
 ## Implementation 
