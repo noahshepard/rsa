@@ -13,7 +13,7 @@ A simple RSA API
 Build using CMake\
 `cmake -S . -B build` \
 `cmake --build build` \
-*Note: Default build requires google test to be installed*
+*Note: By default will use FetchContent to get GTest v1.17.0*
 
 ### Key Generation 
 Generate a public/private key pair to files with \
@@ -24,6 +24,11 @@ Once keys have been generated encrypt/decrypt using \
 `./build/encrypt <public-key-file> <message-file> <cyphertext-file>`\
 `./build/decrypt <private-key-file> <cyphertext-file> <message-file>`\
 *Note: message files must be less than 256 characters in size*
+
+### Testing 
+Unit Tests for prime generation, big int operators, and modular arithmetic functions. End-to-End tests of RSA implementation \
+Run tests with \
+`./build/rsa_tests` \
 
 ## Implementation 
 

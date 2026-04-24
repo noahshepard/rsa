@@ -99,8 +99,7 @@ TEST(PrimeGen, LargePrime) {
 
 TEST(RSA, KeyGeneration) {
   auto [pub_key, priv_key] = rsa::generate_key_pair();
-  // Just Checks speed of generation
-  EXPECT_TRUE(1);
+  EXPECT_TRUE(1); // speed check
 }
 
 TEST(RSA, EncryptDecrypt) {

@@ -3,6 +3,7 @@
 #include "uint.hpp"
 #include <array>
 #include <fstream>
+#include <future>
 #include <iostream>
 #include <random>
 
@@ -21,9 +22,14 @@ std::array<uint64_t, 70> PRIMES = {
  * \return A pair of public_key and private_key structs.
  */
 std::pair<public_key, private_key> generate_key_pair() {
-  uint2048_t p = generate_large_prime();
+  // uint2048_t p = generate_large_prime();
+  std::future<uint2048_t> p_async =
+      std::async(std::launch::async, generate_large_prime);
+  std::future<uint2048_t> q_async =
+      std::async(std::launch::async, generate_large_prime);
 
-  uint2048_t q = generate_large_prime();
+  uint2048_t p = p_async.get();
+  uint2048_t q = q_async.get();
 
   uint2048_t n = p * q;
 
