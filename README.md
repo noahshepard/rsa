@@ -28,7 +28,7 @@ Once keys have been generated encrypt/decrypt using \
 ### Testing 
 Unit Tests for prime generation, big int operators, and modular arithmetic functions. End-to-End tests of RSA implementation \
 Run tests with \
-`./build/rsa_tests`\
+`./build/rsa_tests`
 
 ## Implementation 
 
